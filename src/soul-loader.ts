@@ -1,8 +1,8 @@
 // ============================================================
-// pi-persona — 灵魂加载器
-// 自定义方式: ~/.pi/agent/IDENTIFY.md（元数据）+ ~/.pi/agent/SOUL.md（散文正文）
-//             + ~/.pi/agent/USER.md（用户自愿维护的偏好与上下文）
-// 只读取用户级 ~/.pi/agent/；如果该位置没有 SOUL.md，则不加载/注入灵魂
+// pi-persona — soul loader
+// Customisation: ~/.pi/agent/IDENTIFY.md (metadata) + ~/.pi/agent/SOUL.md (prose body)
+//                + ~/.pi/agent/USER.md (optional user-maintained preferences and context)
+// Only the user-level ~/.pi/agent/ is read; with no SOUL.md there, no soul is loaded or injected.
 // ============================================================
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -28,7 +28,7 @@ interface SoulCacheStamp {
 }
 
 // ==============================================================
-// 文件路径
+// File paths
 // ==============================================================
 
 function userHomeDir(): string {
@@ -88,7 +88,7 @@ function sameSoulCacheStamp(a: SoulCacheStamp | undefined, b: SoulCacheStamp): b
 }
 
 // ==============================================================
-// 解析 frontmatter（IDENTIFY.md / SOUL.md 共用）
+// Frontmatter parsing (shared by IDENTIFY.md and SOUL.md)
 // ==============================================================
 
 const NUMERIC_KEYS = [
@@ -100,7 +100,8 @@ function parseMdFrontmatter(raw: string, onWarning?: SoulWarningSink): Record<st
   try {
     const parsed = matter(raw);
     const fm: Record<string, any> = parsed.data as Record<string, any>;
-    // 数值字段转换。非法值不再静默变成 0.5，而是提示并交给 DEFAULT_TRAITS。
+    // Numeric field conversion. Invalid values no longer silently become 0.5 — they warn
+    // and fall back to DEFAULT_TRAITS.
     for (const key of NUMERIC_KEYS) {
       const value = fm[key];
       if (value === undefined) continue;
@@ -108,7 +109,7 @@ function parseMdFrontmatter(raw: string, onWarning?: SoulWarningSink): Record<st
       const n = typeof value === "number" ? value : Number(value);
       if (!Number.isFinite(n) || n < 0 || n > 1) {
         onWarning?.(
-          `[pi-persona] IDENTIFY.md 字段 ${key} 必须是 0 到 1 之间的数字，当前值 ${JSON.stringify(value)} 无效，已使用默认值。`,
+          `[pi-persona] IDENTIFY.md field ${key} must be a number between 0 and 1; ${JSON.stringify(value)} is invalid, using the default.`,
         );
         delete fm[key];
         continue;
@@ -123,7 +124,7 @@ function parseMdFrontmatter(raw: string, onWarning?: SoulWarningSink): Record<st
 }
 
 /**
- * 读取 .md 文件的正文（跳过 --- frontmatter ---），使用 gray-matter
+ * Read the body of a .md file (skipping the --- frontmatter --- block) using gray-matter
  */
 function readMdBody(filePath: string): string | null {
   try {
@@ -135,7 +136,7 @@ function readMdBody(filePath: string): string | null {
 }
 
 // ==============================================================
-// traits 构建 (DRY)
+// Traits construction (DRY)
 // ==============================================================
 
 function buildTraits(fm: Record<string, any>): SoulTraits {
@@ -152,7 +153,7 @@ function buildTraits(fm: Record<string, any>): SoulTraits {
 }
 
 // ==============================================================
-// 从用户级 IDENTIFY.md + SOUL.md + USER.md 构建 SoulDefinition
+// Build a SoulDefinition from the user-level IDENTIFY.md + SOUL.md + USER.md
 // ============================================================== 
 
 function buildSoul(
@@ -163,7 +164,7 @@ function buildSoul(
   return {
     name: metadata.name ?? "Soul",
     emoji: metadata.emoji ?? "󰊠",
-    description: metadata.description ?? "用户自定义灵魂",
+    description: metadata.description ?? "User-defined soul",
     traits: buildTraits(metadata),
     systemPrompt,
     ...(userProfile ? { userProfile } : {}),
@@ -171,14 +172,14 @@ function buildSoul(
 }
 
 // ==============================================================
-// 缓存与公开 API
+// Cache and public API
 // ==============================================================
 
 let cachedSoul: SoulDefinition | null | undefined = undefined;
 let cachedWarnings: string[] = [];
 let cachedStamp: SoulCacheStamp | undefined = undefined;
 
-/** 清除灵魂缓存，/persona reload 时调用 */
+/** Clear the soul cache; called by /persona reload */
 export function invalidateSoulCache(): void {
   cachedSoul = undefined;
   cachedWarnings = [];
@@ -186,15 +187,15 @@ export function invalidateSoulCache(): void {
 }
 
 /**
- * 加载当前唯一灵魂。
+ * Load the single active soul.
  *
- * 只读取 ~/.pi/agent/SOUL.md：
- * - 如果 SOUL.md 不存在或正文为空，不加载任何灵魂
- * - 如果 IDENTIFY.md 存在，使用 IDENTIFY.md frontmatter 作为元数据
- * - 如果 IDENTIFY.md 不存在，使用默认元数据
- * - 如果 USER.md 存在且正文非空，作为用户自愿维护的帮助上下文注入
+ * Reads ~/.pi/agent/SOUL.md only:
+ * - if SOUL.md is missing or its body is empty, no soul is loaded
+ * - if IDENTIFY.md exists, its frontmatter is used as metadata
+ * - if IDENTIFY.md is missing, default metadata is used
+ * - if USER.md exists with a non-empty body, it is injected as optional user context
  *
- * IDENTIFY.md 中的 id 字段会被忽略；当前实现不再需要唯一 id。
+ * The id field in IDENTIFY.md is ignored; the current implementation no longer needs a unique id.
  */
 export function loadSoul(options: LoadSoulOptions = {}): SoulDefinition | null {
   const currentStamp = getSoulCacheStamp();

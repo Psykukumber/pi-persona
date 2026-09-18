@@ -1,5 +1,5 @@
 // ============================================================
-// pi-persona — 持久化
+// pi-persona — persistence
 // ============================================================
 import * as fs from "node:fs";
 import { promises as fsp } from "node:fs";
@@ -193,7 +193,8 @@ export function restorePersistentState(): PersistentState {
   const state = readStateFile();
 
   if (state) {
-    // 读取时已归一化 angle/intensity/history；lastInteraction 保留合理时间戳，衰减由 MoodEngine.restoreState() 计算。
+    // angle/intensity/history are normalised on read; lastInteraction keeps a sane timestamp and
+    // the decay itself is computed by MoodEngine.restoreState().
     return state;
   }
 
@@ -320,7 +321,7 @@ async function withStateLock<T>(fn: () => Promise<T>): Promise<T> {
     return await fn();
   } finally {
     await release().catch((err) => {
-      console.error("[pi-persona] 释放状态锁失败:", err);
+      console.error("[pi-persona] Failed to release the state lock:", err);
     });
   }
 }
@@ -340,7 +341,7 @@ export async function readPersistentStateLocked(): Promise<PersistentState> {
   return withStateLock(async () => restorePersistentState());
 }
 
-/** 同步引擎情绪坐标到持久化状态，不改 history。 */
+/** Sync the engine's emotion coordinates into the persisted state, leaving history untouched. */
 export function syncMoodToPersistent(engine: { persistent: PersistentState; state: { angle: number; intensity: number } }): void {
   engine.persistent.lastAngle = engine.state.angle;
   engine.persistent.lastIntensity = engine.state.intensity;

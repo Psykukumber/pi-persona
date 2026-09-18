@@ -1,5 +1,5 @@
 // ============================================================
-// pi-persona — Footer 心情显示
+// pi-persona — footer mood display
 // ============================================================
 import type { MoodEngine } from "./mood-engine.js";
 

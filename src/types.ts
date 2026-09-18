@@ -1,19 +1,19 @@
 // ============================================================
-// pi-persona — 核心类型定义 (Plutchik 情绪轮盘模型)
+// pi-persona — core type definitions (Plutchik emotion wheel model)
 // ============================================================
 
-/** Plutchik 8 种基本情绪 */
+/** Plutchik's 8 basic emotions */
 export type Emotion =
-  | "joy"           // 喜悦 — 0°
-  | "trust"         // 信任 — 45°
-  | "fear"          // 恐惧 — 90°
-  | "surprise"      // 惊讶 — 135°
-  | "sadness"       // 悲伤 — 180°
-  | "disgust"       // 厌恶 — 225°
-  | "anger"         // 愤怒 — 270°
-  | "anticipation"; // 期待 — 315°
+  | "joy"           // 0°
+  | "trust"         // 45°
+  | "fear"          // 90°
+  | "surprise"      // 135°
+  | "sadness"       // 180°
+  | "disgust"       // 225°
+  | "anger"         // 270°
+  | "anticipation"; // 315°
 
-/** 情绪在轮盘上的角度 */
+/** Angle of each emotion on the wheel */
 export const EMOTION_ANGLE: Record<Emotion, number> = {
   joy: 0,
   trust: 45,
@@ -25,7 +25,7 @@ export const EMOTION_ANGLE: Record<Emotion, number> = {
   anticipation: 315,
 };
 
-/** 显式顺序迭代数组，不依赖 Object.entries 插入序 */
+/** Explicitly ordered iteration array; does not rely on Object.entries insertion order */
 export const EMOTION_ENTRIES: readonly (readonly [Emotion, number])[] = [
   ["joy", 0],
   ["trust", 45],
@@ -37,7 +37,7 @@ export const EMOTION_ENTRIES: readonly (readonly [Emotion, number])[] = [
   ["anticipation", 315],
 ] as const;
 
-/** 根据角度找最近的基本情绪 */
+/** Find the basic emotion nearest to a given angle */
 export function nearestEmotion(angle: number): Emotion {
   const a = ((angle % 360) + 360) % 360;
   let nearest: Emotion = "joy";
@@ -53,14 +53,14 @@ export function nearestEmotion(angle: number): Emotion {
   return nearest;
 }
 
-/** 强度分档 (Plutchik 三级) */
+/** Intensity tier (Plutchik's three levels) */
 export function intensityLevel(intensity: number): 1 | 2 | 3 {
   if (intensity <= 0.33) return 1;
   if (intensity <= 0.66) return 2;
   return 3;
 }
 
-/** 表情 emoji */
+/** Emoji for each emotion */
 export const EMOTION_EMOJI: Record<Emotion, string> = {
   joy:           "😊",
   sadness:       "😞",
@@ -72,19 +72,19 @@ export const EMOTION_EMOJI: Record<Emotion, string> = {
   anticipation:  "🤔",
 };
 
-/** 中文标签（UI 显示用） */
+/** Display labels (shown in the UI) */
 export const EMOTION_LABELS: Record<Emotion, string> = {
-  joy:           "喜悦",
-  sadness:       "悲伤",
-  trust:         "信任",
-  disgust:       "厌恶",
-  fear:          "恐惧",
-  anger:         "愤怒",
-  surprise:      "惊讶",
-  anticipation:  "期待",
+  joy:           "Joy",
+  sadness:       "Sadness",
+  trust:         "Trust",
+  disgust:       "Disgust",
+  fear:          "Fear",
+  anger:         "Anger",
+  surprise:      "Surprise",
+  anticipation:  "Anticipation",
 };
 
-/** Plutchik 三级强度名称 (1=弱 / 2=中 / 3=强) */
+/** Plutchik's three intensity levels (1=mild / 2=moderate / 3=intense) */
 export const EMOTION_LEVEL_NAMES: Record<Emotion, [string, string, string]> = {
   joy:           ["serenity", "joy", "ecstasy"],
   sadness:       ["pensiveness", "sadness", "grief"],
@@ -96,7 +96,7 @@ export const EMOTION_LEVEL_NAMES: Record<Emotion, [string, string, string]> = {
   anticipation:  ["interest", "anticipation", "vigilance"],
 };
 
-/** 相邻组合 → 次级情绪 (角度落在两个情绪中点附近时触发) */
+/** Adjacent pairs → dyad emotion (fires when the angle sits near the midpoint of two emotions) */
 export const COMPOUND_EMOTIONS: Record<string, string> = {
   "joy_trust":            "love",
   "trust_fear":           "submission",
@@ -109,16 +109,16 @@ export const COMPOUND_EMOTIONS: Record<string, string> = {
 };
 
 // ==============================================================
-// 情绪事件
+// Emotional events
 // ==============================================================
 
 export type EmotionalValence = "positive" | "negative" | "neutral";
 
-/** 事件：推动轮盘位置，而非直接设目标情绪 */
+/** An event nudges the position on the wheel rather than setting the target emotion directly */
 export interface EmotionalEvent {
   trigger: string;
   targetAngle: number;
-  force: number;         // 推力 0-1
+  force: number;         // push strength, 0-1
   valence: EmotionalValence;
 }
 
@@ -139,7 +139,7 @@ export interface PersistentEmotionSnapshot extends EmotionSnapshot {
 }
 
 // ==============================================================
-// 运行时状态
+// Runtime state
 // ==============================================================
 
 export interface EmotionalState {
@@ -159,7 +159,7 @@ export interface PersistentState {
 }
 
 // ==============================================================
-// 情绪配置 (EMOTION.md)
+// Emotion configuration (EMOTION.md)
 // ==============================================================
 
 export interface EmotionLevelEntry {
@@ -180,14 +180,14 @@ export interface EmotionTriggerConfig {
 }
 
 export interface EmotionConfig {
-  lambdaBase: number; // 指数衰减系数, 半衰期 ≈ ln(2)/λ @ N=0.5
+  lambdaBase: number; // exponential decay coefficient; half-life ≈ ln(2)/λ @ N=0.5
   emotions: Record<Emotion, EmotionEntry>;
   triggers: Record<string, EmotionTriggerConfig>;
 }
 
-/** 情绪配置唯一来源 = 内置 Plutchik 模型，不可覆盖 */
+/** Single source of truth for emotion config = the built-in Plutchik model; not overridable */
 export const DEFAULT_EMOTION_CONFIG: EmotionConfig = {
-  lambdaBase: 0.00054, // 半衰期 ≈ 21 分钟 (N=0.5)
+  lambdaBase: 0.00054, // half-life ≈ 21 minutes (N=0.5)
   emotions: {
     joy: {
       level1: { desc: "A faint sense of contentment. Barely there.", phrase: "Mm" },
@@ -247,7 +247,7 @@ export const DEFAULT_EMOTION_CONFIG: EmotionConfig = {
 };
 
 // ==============================================================
-// 对外接口类型
+// Public interface types
 // ==============================================================
 
 export interface EmotionFooterData {
@@ -267,7 +267,7 @@ export interface EmotionChange {
 }
 
 // ==============================================================
-// 灵魂 (Soul)
+// Soul
 // ==============================================================
 
 export interface SoulTraits {

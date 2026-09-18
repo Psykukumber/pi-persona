@@ -1,5 +1,5 @@
 // ============================================================
-// pi-persona — 心情引擎 (Plutchik 轮盘状态机)
+// pi-persona — mood engine (Plutchik wheel state machine)
 // ============================================================
 import type {
   EmotionalEvent,
@@ -45,7 +45,7 @@ export class MoodEngine {
     this.lastTick = Date.now();
   }
 
-  /** 从持久化状态恢复情绪坐标，基于时间差自动衰减 */
+  /** Restore the emotion coordinates from persisted state, decaying by elapsed time */
   restoreState(angle: number, intensity: number, lastInteraction: number): void {
     this.state.angle = angle;
     this.state.intensity = intensity;
@@ -54,7 +54,7 @@ export class MoodEngine {
   }
 
   // ==============================================================
-  // 处理情感事件
+  // Emotional event handling
   // ==============================================================
 
   processEvent(event: EmotionalEvent): EmotionChange {
@@ -64,13 +64,13 @@ export class MoodEngine {
 
     this.tick(now);
 
-    // 1. 调制力度
+    // 1. Modulate the force
     const modulatedForce = this.modulateForce(event);
 
-    // 2. 沿轮盘滑向目标角度
+    // 2. Slide along the wheel toward the target angle
     this.slideTowardAngle(event, modulatedForce);
 
-    // 3. 记录历史
+    // 3. Record history
     const currentEmotion = nearestEmotion(this.state.angle);
     const level = intensityLevel(this.state.intensity);
     const compound = this.getCompoundLabel();
@@ -105,7 +105,7 @@ export class MoodEngine {
     };
   }
 
-  /** 直接设置当前情绪坐标，用于显式用户命令，不经过轮盘滑动。 */
+  /** Set the emotion coordinates directly, for explicit user commands — bypasses wheel sliding. */
   setEmotion(emotion: Emotion, intensity: number, trigger: string): EmotionChange {
     const now = Date.now();
     this.tick(now);
@@ -148,7 +148,7 @@ export class MoodEngine {
   }
 
   // ==============================================================
-  // 沿轮盘滑动 (核心过渡 — 一次事件最多跨 45°)
+  // Sliding along the wheel (core transition — a single event spans at most 45°)
   // ==============================================================
 
   private slideTowardAngle(event: EmotionalEvent, force: number): void {
@@ -160,26 +160,27 @@ export class MoodEngine {
 
     const absArc = Math.abs(arc);
     if (absArc < 1) {
-      // 已在目标区域 → 强化强度
+      // Already in the target sector → reinforce intensity
       this.state.intensity = Math.min(1, this.state.intensity + force * 0.4);
       return;
     }
 
-    // 最大单步移动 = 45° (一个相邻情绪)；用户纠错从正向对跖点被拉回时允许更明显的首跳。
+    // Max single step = 45° (one adjacent emotion). A user correction pulled back from the
+    // positive antipode is allowed a more pronounced first jump.
     const maxSingleStep = isOpposite && event.trigger === "user_correction" ? 90 : 45;
     const maxStep = Math.min(maxSingleStep, absArc * force * 2);
     const step = Math.min(absArc, Math.max(5, maxStep));
 
-    // 若向对立方向移动，衰减加速
+    // Moving toward the opposite direction accelerates decay
     if (absArc > 90) {
       this.state.intensity = Math.max(0.05, this.state.intensity - force * 0.3);
     }
 
-    // 移动角度
+    // Move the angle
     const direction = arc > 0 ? 1 : -1;
     this.state.angle = ((this.state.angle + step * direction) % 360 + 360) % 360;
 
-    // 到达目标区域后累积强度
+    // Accumulate intensity once the target sector is reached
     const remaining = this.shortestArc(this.state.angle, event.targetAngle);
     if (Math.abs(remaining) < 22.5) {
       this.state.intensity = Math.min(1, this.state.intensity + force * 0.35);
@@ -187,10 +188,10 @@ export class MoodEngine {
   }
 
   // ==============================================================
-  // 角度计算
+  // Angle math
   // ==============================================================
 
-  /** 最短弧距 (-180 ~ +180) */
+  /** Shortest arc distance (-180 … +180) */
   private shortestArc(from: number, to: number): number {
     let diff = ((to % 360) + 360) % 360 - ((from % 360) + 360) % 360;
     if (diff > 180) diff -= 360;
@@ -199,8 +200,9 @@ export class MoodEngine {
   }
 
   /**
-   * 对跖点没有唯一最短路径。负向事件应优先穿过悲伤/厌恶/愤怒侧，
-   * 避免 joy→sadness 时经过 trust 这种语义反直觉路线。
+   * An antipodal point has no single shortest path. Negative events should prefer the
+   * sadness/disgust/anger side, avoiding semantically backwards routes such as
+   * joy→sadness travelling through trust.
    */
   private negativeOppositeArc(): 180 | -180 {
     const coreNegative = new Set<Emotion>(["sadness", "disgust", "anger"]);
@@ -215,54 +217,55 @@ export class MoodEngine {
   }
 
   // ==============================================================
-  // 力度调制 (OCEAN traits)
+  // Force modulation (OCEAN traits)
   // ==============================================================
 
   private modulateForce(event: EmotionalEvent): number {
     let force = event.force;
     const t = this.soul.traits;
 
-    // 事件语义由 trigger 显式声明，不从轮盘几何位置推断。
-    // 同一个负向事件在靠近目标情绪时仍然是负向，否则重复失败会被误判成正向强化。
+    // Event semantics come from the trigger's explicit declaration, not from wheel geometry.
+    // A negative event stays negative even near its target emotion; otherwise repeated
+    // failures would be misread as positive reinforcement.
     const isNegativePush = event.valence === "negative";
     const isPositivePush = event.valence === "positive";
 
-    // 傲娇压制正向推力
+    // Tsundere: suppresses positive pushes
     if (t.tsundere > 0.5 && isPositivePush) {
       force *= 1 - t.tsundere * 0.3;
     }
 
-    // 神经质：负向事件推力放大，正向推力压制
+    // Neuroticism: amplifies negative pushes, suppresses positive ones
     if (isNegativePush) {
       force *= 1 + t.neuroticism * 0.5;
     } else if (isPositivePush) {
       force *= 1 - t.neuroticism * 0.2;
     }
 
-    // 外向性：正向推力放大
+    // Extraversion: amplifies positive pushes
     if (isPositivePush) {
       force *= 1 + t.extraversion * 0.4;
     }
 
-    // 尽责性：全局力缓冲
+    // Conscientiousness: global force damping
     force *= 1 - t.conscientiousness * 0.2;
 
-    // 毒舌：负向推力放大
+    // Sarcasm: amplifies negative pushes
     if (isNegativePush) {
       force *= 1 + t.sarcasm * 0.3;
     }
 
-    // 正式度：全局克制
+    // Formality: global restraint
     force *= 1 - t.formality * 0.2;
 
     return Math.max(0.02, Math.min(1, force));
   }
 
   // ==============================================================
-  // 自然衰减 (指数渐近 → baseline, 仅神经质调制)
+  // Natural decay (exponential approach → baseline, modulated by neuroticism only)
   // ==============================================================
 
-  private static readonly BASELINE = 0.15; // 情绪自然静息强度
+  private static readonly BASELINE = 0.15; // natural resting intensity
 
   tick(now: number = Date.now()): void {
     if (!this.persistent.emotionUpdatesEnabled) {
@@ -278,19 +281,20 @@ export class MoodEngine {
     const neuroticismFactor = 0.5 + N * 1.5; // N=0→0.5 N=0.5→1.25 N=1→2.0
     const lambda = this.emotionConfig.lambdaBase / neuroticismFactor;
 
-    // 指数渐近: intensity = baseline + (intensity - baseline) × e^(-λ × elapsed)
-    // tick 只让强度回归自然静息点；情绪方向 angle 只能由事件改变。
+    // Exponential approach: intensity = baseline + (intensity - baseline) × e^(-λ × elapsed)
+    // A tick only returns intensity toward the resting point; the angle (emotion
+    // direction) can be changed by events alone.
     const offsetFromBaseline = this.state.intensity - MoodEngine.BASELINE;
     const retained = offsetFromBaseline * Math.exp(-lambda * elapsed);
     this.state.intensity = Math.min(1, Math.max(0, MoodEngine.BASELINE + retained));
 
-    // 当前情绪坐标已经推进到 now；持久化时间戳必须跟坐标同源，
-    // 不能由写盘层擅自刷新，否则会吃掉跨会话衰减时间。
+    // The coordinates have already advanced to `now`, so the persisted timestamp must share
+    // that origin — the write layer must not refresh it, or cross-session decay time is lost.
     this.persistent.lastInteraction = now;
   }
 
   // ==============================================================
-  // 当前情绪信息
+  // Current emotion info
   // ==============================================================
 
   getCurrentEmotion(): Emotion {
@@ -312,7 +316,8 @@ export class MoodEngine {
     const sectorSize = 45;
     const compoundWindow = 15;
 
-    // 直接按 Plutchik 相邻扇区算中点，避免 ±22.5° 最近情绪探测在基本情绪中心点产生 tie。
+    // Take the midpoint straight from adjacent Plutchik sectors; this avoids ties that
+    // ±22.5° nearest-emotion detection produces at basic-emotion centers.
     const leftIndex = Math.floor(a / sectorSize);
     const rightIndex = (leftIndex + 1) % EMOTION_ENTRIES.length;
     const midpoint = leftIndex * sectorSize + sectorSize / 2;
@@ -332,7 +337,7 @@ export class MoodEngine {
   }
 
   // ==============================================================
-  // Footer 数据
+  // Footer data
   // ==============================================================
 
   getFooterData(): EmotionFooterData {
@@ -357,7 +362,7 @@ export class MoodEngine {
   }
 
   // ==============================================================
-  // System Prompt 注入
+  // System prompt injection
   // ==============================================================
 
   getSystemPromptAddition(): string {

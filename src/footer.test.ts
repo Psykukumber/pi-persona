@@ -44,7 +44,7 @@ test("getFooterStatusText renders soul name and current emotion label", () => {
   const engine = createEngine();
   engine.setEmotion("anger", 0.8, "manual_set");
 
-  assert.equal(getFooterStatusText(engine), "󰊠 Test Soul·愤怒");
+  assert.equal(getFooterStatusText(engine), "󰊠 Test Soul·Anger");
 });
 
 test("tickAndGetFooterText ticks engine before rendering footer", () => {
@@ -55,6 +55,6 @@ test("tickAndGetFooterText ticks engine before rendering footer", () => {
   const before = engine.state.intensity;
   const footer = tickAndGetFooterText(engine);
 
-  assert.equal(footer, "󰊠 Test Soul·喜悦");
+  assert.equal(footer, "󰊠 Test Soul·Joy");
   assert.ok(engine.state.intensity <= before);
 });

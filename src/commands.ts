@@ -1,5 +1,5 @@
 // ============================================================
-// pi-persona — 命令注册
+// pi-persona — command registration
 // ============================================================
 import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
@@ -22,7 +22,7 @@ export function registerPersonaCommands(
   setEngine: (engine: MoodEngine | null) => void,
 ): void {
   pi.registerCommand("persona", {
-    description: "查看或重新加载 pi 的灵魂状态",
+    description: "Inspect or reload pi's soul state",
     handler: async (args, ctx) => {
       const arg = args?.trim() ?? "";
 
@@ -30,7 +30,7 @@ export function registerPersonaCommands(
         const engine = getEngine();
         if (!engine) {
           ctx.ui.notify(
-            "当前无激活灵魂。请创建 ~/.pi/agent/SOUL.md 后重启会话或执行 /persona reload。",
+            "No active soul. Create ~/.pi/agent/SOUL.md, then restart the session or run /persona reload.",
             "info",
           );
           return;
@@ -45,7 +45,7 @@ export function registerPersonaCommands(
         const engine = getEngine();
         if (!engine) {
           ctx.ui.notify(
-            "当前无激活灵魂。请创建 ~/.pi/agent/SOUL.md 后重启会话或执行 /persona reload。",
+            "No active soul. Create ~/.pi/agent/SOUL.md, then restart the session or run /persona reload.",
             "info",
           );
           return;
@@ -60,7 +60,7 @@ export function registerPersonaCommands(
         await setGlobalMood(engine, parsed.emotion, parsed.intensity, "manual_set");
         if (ctx.hasUI) ctx.ui.setStatus("soul-mood", getFooterStatusText(engine));
         ctx.ui.notify(
-          `已设置情绪: ${EMOTION_EMOJI[parsed.emotion]} ${EMOTION_LABELS[parsed.emotion]} / ${Math.round(parsed.intensity * 100)}%`,
+          `Emotion set: ${EMOTION_EMOJI[parsed.emotion]} ${EMOTION_LABELS[parsed.emotion]} / ${Math.round(parsed.intensity * 100)}%`,
           "info",
         );
         return;
@@ -71,7 +71,7 @@ export function registerPersonaCommands(
         const engine = getEngine();
         if (!engine) {
           ctx.ui.notify(
-            "当前无激活灵魂。请创建 ~/.pi/agent/SOUL.md 后重启会话或执行 /persona reload。",
+            "No active soul. Create ~/.pi/agent/SOUL.md, then restart the session or run /persona reload.",
             "info",
           );
           return;
@@ -80,13 +80,13 @@ export function registerPersonaCommands(
         const action = (emotionMatch[1] ?? "status").trim().toLowerCase();
         if (!action || action === "status") {
           await refreshGlobalMood(engine, false);
-          const status = engine.persistent.emotionUpdatesEnabled ? "开启" : "关闭";
-          ctx.ui.notify(`情绪变化当前为${status}。`, "info");
+          const status = engine.persistent.emotionUpdatesEnabled ? "on" : "off";
+          ctx.ui.notify(`Emotion updates are currently ${status}.`, "info");
           return;
         }
 
         if (action !== "on" && action !== "off") {
-          ctx.ui.notify("用法: /persona emotion on|off|status", "warning");
+          ctx.ui.notify("Usage: /persona emotion on|off|status", "warning");
           return;
         }
 
@@ -95,8 +95,8 @@ export function registerPersonaCommands(
         if (ctx.hasUI) ctx.ui.setStatus("soul-mood", getFooterStatusText(engine));
         ctx.ui.notify(
           enabled
-            ? "已开启情绪变化。事件会继续影响情绪。"
-            : "已关闭情绪变化。事件不会再影响情绪，/persona set 仍可手动修改。",
+            ? "Emotion updates enabled. Events will influence the mood again."
+            : "Emotion updates disabled. Events no longer influence the mood; /persona set still works.",
           "info",
         );
         return;
@@ -113,7 +113,7 @@ export function registerPersonaCommands(
         if (!soul) {
           setEngine(null);
           if (ctx.hasUI) ctx.ui.setStatus("soul-mood", "");
-          ctx.ui.notify("未找到可加载的 ~/.pi/agent/SOUL.md，灵魂已停用。", "warning");
+          ctx.ui.notify("No loadable ~/.pi/agent/SOUL.md found; soul deactivated.", "warning");
           return;
         }
         if (!engine) {
@@ -127,19 +127,19 @@ export function registerPersonaCommands(
           await refreshGlobalMood(newEngine, true);
           setEngine(newEngine);
           if (ctx.hasUI) ctx.ui.setStatus("soul-mood", getFooterStatusText(newEngine));
-          ctx.ui.notify(`已激活灵魂: ${soul.emoji} ${soul.name}`, "info");
+          ctx.ui.notify(`Soul activated: ${soul.emoji} ${soul.name}`, "info");
           return;
         }
 
         engine.soul = soul;
         await refreshGlobalMood(engine, true);
         if (ctx.hasUI) ctx.ui.setStatus("soul-mood", getFooterStatusText(engine));
-        ctx.ui.notify(`已重新加载灵魂: ${soul.emoji} ${soul.name}`, "info");
+        ctx.ui.notify(`Soul reloaded: ${soul.emoji} ${soul.name}`, "info");
         return;
       }
 
       ctx.ui.notify(
-        "未知用法。可用命令: /persona、/persona status、/persona reload、/persona set <emotion> <intensity>、/persona emotion on|off|status",
+        "Unknown usage. Available: /persona, /persona status, /persona reload, /persona set <emotion> <intensity>, /persona emotion on|off|status",
         "warning",
       );
     },
@@ -150,6 +150,8 @@ export function registerPersonaCommands(
 // Helpers
 // ============================================================== 
 
+// Accepted input spellings. The Chinese labels are kept for backwards compatibility:
+// they only widen what `/persona set` understands and are never displayed.
 const EMOTION_ALIASES: Record<string, Emotion> = {
   joy: "joy",
   喜悦: "joy",
@@ -169,8 +171,8 @@ const EMOTION_ALIASES: Record<string, Emotion> = {
   期待: "anticipation",
 };
 
-const SET_USAGE = "用法: /persona set <emotion> <intensity>，例如 /persona set anger 80";
-const AVAILABLE_EMOTIONS = "可用情绪: joy, trust, fear, surprise, sadness, disgust, anger, anticipation（也支持中文标签）";
+const SET_USAGE = "Usage: /persona set <emotion> <intensity> — e.g. /persona set anger 80";
+const AVAILABLE_EMOTIONS = "Available emotions: joy, trust, fear, surprise, sadness, disgust, anger, anticipation (Chinese labels are also accepted).";
 
 export type ParseSetEmotionResult =
   | { ok: true; emotion: Emotion; intensity: number }
@@ -184,12 +186,12 @@ export function parseSetEmotionArgs(input: string): ParseSetEmotionResult {
 
   const emotion = EMOTION_ALIASES[parts[0].toLowerCase()] ?? EMOTION_ALIASES[parts[0]];
   if (!emotion) {
-    return { ok: false, message: `未知情绪。${AVAILABLE_EMOTIONS}` };
+    return { ok: false, message: `Unknown emotion. ${AVAILABLE_EMOTIONS}` };
   }
 
   const intensity = parseIntensity(parts[1]);
   if (intensity === null) {
-    return { ok: false, message: "强度必须是 0-1、0-100 或百分比，例如 0.7、70、70%" };
+    return { ok: false, message: "Intensity must be 0-1, 0-100, or a percentage — e.g. 0.7, 70, 70%" };
   }
 
   return { ok: true, emotion, intensity };
@@ -227,8 +229,11 @@ async function showEmotionDetail(engine: MoodEngine, ctx: ExtensionCommandContex
 }
 
 // ==============================================================
-// PersonaOverlay — 浮窗展示灵魂/情绪状态
+// PersonaOverlay — popup showing soul / emotion state
 // ==============================================================
+
+/** Width of the label column, sized to the longest label ("Description:"). */
+const OVERLAY_LABEL_WIDTH = 12;
 
 class PersonaOverlay implements Component {
   private theme: Theme;
@@ -265,7 +270,7 @@ class PersonaOverlay implements Component {
       th.fg("border", "│") + pad(truncateToWidth(content, innerW, "…"), innerW) + th.fg("border", "│");
 
     const labeledRows = (label: string, text: string, color?: "muted" | "dim"): void => {
-      const prefix = ` ${th.fg("accent", label)}  `;
+      const prefix = ` ${th.fg("accent", label.padEnd(OVERLAY_LABEL_WIDTH))}  `;
       const textWidth = Math.max(1, innerW - visibleWidth(prefix));
       const wrapped = wrapTextWithAnsi(color ? th.fg(color, text) : text, textWidth);
       if (wrapped.length === 0) {
@@ -301,27 +306,27 @@ class PersonaOverlay implements Component {
     lines.push(row(""));
 
     const emotionLabel = `${EMOTION_EMOJI[emo]} ${EMOTION_LABELS[emo]} / L${level} ${levelName}`;
-    labeledRows("情绪:", emotionLabel);
-    labeledRows("变化:", this.engine.persistent.emotionUpdatesEnabled ? "开启" : "关闭", "muted");
+    labeledRows("Emotion:", emotionLabel);
+    labeledRows("Updates:", this.engine.persistent.emotionUpdatesEnabled ? "on" : "off", "muted");
 
-    const compLabel = compound ?? "无";
-    labeledRows("复合:", compLabel, "muted");
+    const compLabel = compound ?? "none";
+    labeledRows("Compound:", compLabel, "muted");
 
-    labeledRows("描述:", this.engine.getEmotionDesc());
-    labeledRows("口头禅:", this.engine.getEmotionPhrase(), "muted");
+    labeledRows("Description:", this.engine.getEmotionDesc());
+    labeledRows("Catchphrase:", this.engine.getEmotionPhrase(), "muted");
 
     const angleStr = `${Math.round(state.angle)}°`;
-    labeledRows("角度:", angleStr);
+    labeledRows("Angle:", angleStr);
 
     const intensityBar = `${th.fg("accent", "█".repeat(bar))}${th.fg("dim", "░".repeat(10 - bar))}`;
     const intensityPct = `${Math.round(state.intensity * 100)}%`;
-    labeledRows("强度:", `${intensityBar} ${intensityPct}`);
+    labeledRows("Intensity:", `${intensityBar} ${intensityPct}`);
 
     if (state.history.length > 0) {
       lines.push(row(""));
-      lines.push(row(` ${th.fg("dim", "── 最近情绪变化 ──")}`));
+      lines.push(row(` ${th.fg("dim", "── Recent mood changes ──")}`));
       for (const snap of state.history.slice(-3).reverse()) {
-        const time = new Date(snap.timestamp).toLocaleTimeString("zh-CN", {
+        const time = new Date(snap.timestamp).toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
         });
@@ -333,7 +338,7 @@ class PersonaOverlay implements Component {
     }
 
     lines.push(row(""));
-    lines.push(row(` ${th.fg("dim", "Esc / Enter 关闭")}`));
+    lines.push(row(` ${th.fg("dim", "Esc / Enter to close")}`));
     lines.push(th.fg("border", `╰${"─".repeat(innerW)}╯`));
 
     return lines;

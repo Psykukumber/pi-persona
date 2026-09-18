@@ -1,5 +1,5 @@
 // ============================================================
-// pi-persona — 事件触发器
+// pi-persona — event triggers
 // ============================================================
 import type { EmotionalEvent, EmotionConfig } from "./types.js";
 
@@ -100,7 +100,8 @@ export function detectFromBashResult(
   const t = config.triggers;
   const isBuild = isBuildCommand(command);
   const isTest = isTestCommand(command);
-  // 若工具未回传 exitCode 且未标记 isError，则结果未知：保持沉默，不触发成功/失败情绪。
+  // If the tool returned no exitCode and is not flagged isError, the result is unknown:
+  // stay silent rather than firing a success/failure emotion.
   const hasSucceeded = exitCode === 0 && !isError;
   const hasFailed = isError || (exitCode !== undefined && exitCode !== 0);
 
@@ -130,7 +131,7 @@ export function detectRepeatedErrors(
 
   if (!isError) { resetErrorStreak(state); return null; }
 
-  // 剥离注释 (# 之后)、剥离 flag 参数 (-- 或 - 开头)、空白规范化
+  // Strip comments (everything after #), strip flag arguments (leading -- or -), normalise whitespace
   const noComments = command.replace(/#.*$/, "");
   const normalized = noComments.split(/\s+/).filter(w => !w.startsWith("-")).join(" ");
   const simplified = normalized.trim().slice(0, 80);
@@ -162,6 +163,8 @@ export function detectExplicitUserFeedback(text: string, config: EmotionConfig, 
   const t = config.triggers;
   const lower = text.toLowerCase();
 
+  // These patterns match what the user typed, so the Chinese alternatives are kept alongside
+  // the English ones: they only widen what counts as praise or a correction.
   if (/谢谢|太棒了|厉害|牛|good job|well done|awesome|great/i.test(lower)) {
     const praiseForce = t.user_praise.force * (0.5 + agreeableness * 0.5);
     return { trigger: "user_praise", ...t.user_praise, force: praiseForce };

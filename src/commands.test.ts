@@ -131,7 +131,7 @@ test("persona status notifies when no soul is active", async () => {
 
   await harness.command.handler("status", ctx);
 
-  assert.match(notifications[0]?.message ?? "", /当前无激活灵魂/);
+  assert.match(notifications[0]?.message ?? "", /No active soul/);
   assert.equal(notifications[0]?.level, "info");
 });
 
@@ -156,8 +156,8 @@ test("persona set updates global mood and footer", async () => {
 
     assert.equal(engine.getCurrentEmotion(), "anger");
     assert.ok(Math.abs(engine.state.intensity - 0.8) < 0.001);
-    assert.match(notifications[0]?.message ?? "", /已设置情绪: .*愤怒 \/ 80%/);
-    assert.deepEqual(statuses.at(-1), { key: "soul-mood", value: "󰊠 Test Soul·愤怒" });
+    assert.match(notifications[0]?.message ?? "", /Emotion set: .*Anger \/ 80%/);
+    assert.deepEqual(statuses.at(-1), { key: "soul-mood", value: "󰊠 Test Soul·Anger" });
   });
 });
 
@@ -167,7 +167,7 @@ test("persona set reports invalid arguments", async () => {
 
   await harness.command.handler("set joy 120", ctx);
 
-  assert.match(notifications[0]?.message ?? "", /强度必须/);
+  assert.match(notifications[0]?.message ?? "", /Intensity must be/);
   assert.equal(notifications[0]?.level, "warning");
 });
 
@@ -180,7 +180,7 @@ test("persona emotion off disables automatic emotion updates", async () => {
     await harness.command.handler("emotion off", ctx);
 
     assert.equal(engine.persistent.emotionUpdatesEnabled, false);
-    assert.match(notifications[0]?.message ?? "", /已关闭情绪变化/);
+    assert.match(notifications[0]?.message ?? "", /Emotion updates disabled/);
   });
 });
 
@@ -194,7 +194,7 @@ test("persona emotion on enables automatic emotion updates", async () => {
     await harness.command.handler("emotion on", ctx);
 
     assert.equal(engine.persistent.emotionUpdatesEnabled, true);
-    assert.match(notifications[0]?.message ?? "", /已开启情绪变化/);
+    assert.match(notifications[0]?.message ?? "", /Emotion updates enabled/);
   });
 });
 
@@ -207,7 +207,7 @@ test("persona reload disables soul when SOUL.md is missing", async () => {
 
     assert.equal(harness.engine, null);
     assert.deepEqual(statuses.at(-1), { key: "soul-mood", value: "" });
-    assert.match(notifications[0]?.message ?? "", /灵魂已停用/);
+    assert.match(notifications[0]?.message ?? "", /soul deactivated/);
   });
 });
 
@@ -222,8 +222,8 @@ test("persona reload activates a soul when no engine exists", async () => {
 
     assert.ok(harness.engine);
     assert.equal(harness.engine.soul.name, "Reloaded");
-    assert.deepEqual(statuses.at(-1), { key: "soul-mood", value: "󰊠 Reloaded·喜悦" });
-    assert.match(notifications[0]?.message ?? "", /已激活灵魂/);
+    assert.deepEqual(statuses.at(-1), { key: "soul-mood", value: "󰊠 Reloaded·Joy" });
+    assert.match(notifications[0]?.message ?? "", /Soul activated/);
   });
 });
 

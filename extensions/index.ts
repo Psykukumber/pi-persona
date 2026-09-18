@@ -1,5 +1,5 @@
 // ============================================================
-// pi-persona — 扩展入口
+// pi-persona — extension entry point
 // ============================================================
 import type {
   AgentEndEvent,
@@ -40,7 +40,7 @@ interface PersonaRuntimeState {
   currentAgentHadNegativeEvent: boolean;
 }
 
-const LATE_NIGHT_COOLDOWN_MS = 30 * 60 * 1000; // 30 分钟
+const LATE_NIGHT_COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes
 
 export default function personaExtension(pi: ExtensionAPI) {
   const state: PersonaRuntimeState = {
@@ -74,14 +74,15 @@ export default function personaExtension(pi: ExtensionAPI) {
     state.engine = new MoodEngine(soulDef, persistent, DEFAULT_EMOTION_CONFIG);
     resetRuntimeState(state);
 
-    // 从持久化恢复情绪坐标（含时间衰减）
+    // Restore emotion coordinates from persisted state (including time decay)
     state.engine.restoreState(
       persistent.lastAngle,
       persistent.lastIntensity,
       persistent.lastInteraction,
     );
 
-    // 在全局锁内基于磁盘最新状态执行自然衰减并写回，避免多进程 stale snapshot 互相覆盖。
+    // Apply natural decay against the freshest on-disk state inside the global lock and write
+    // it back, so concurrent processes cannot overwrite each other with stale snapshots.
     await refreshGlobalMood(state.engine, true);
 
     if (ctx.hasUI) {
@@ -160,19 +161,23 @@ function registerAllHooks(pi: ExtensionAPI, state: PersonaRuntimeState): void {
       }
     }
 
-    // 同一轮可能包含 steering / follow-up 等多条 user message。
-    // 用户反馈情绪只应用最后一个有效事件，避免多句表扬或纠正连续叠加强度。
+    // A single turn may contain several user messages (steering, follow-ups, …).
+    // Only the last valid feedback event is applied, so repeated praise or corrections
+    // do not stack intensity.
     if (lastUserEvent) {
       state.pendingImplicitAcceptance = false;
       await applyAndNotify(engine, lastUserEvent, ctx);
     } else if (sawUserMessage && !state.currentAgentHadNegativeEvent) {
-      // 用户通常不会额外发一句 “good job” 来省 token。
-      // 若上一轮没有明显失败，且下一轮不是纠错而是继续提新需求，再视为被隐式接受。
+      // Users rarely spend tokens on a separate "good job" message.
+      // So if the previous turn had no clear failure and the next one raises new work rather
+      // than a correction, treat that as implicit acceptance.
       state.pendingImplicitAcceptance = true;
     }
 
-    // late_night 表示“用户深夜还在互动”，不是“agent 深夜结束了一轮”。
-    // 只在本轮真的包含用户消息时触发，避免 retry / follow-up / 工具续跑空转时污染情绪。
+    // late_night means "the user is still interacting late at night", not "the agent finished
+    // a turn late at night".
+    // Fire it only when this turn actually contains a user message, so retries, follow-ups and
+    // tool continuations do not pollute the mood.
     if (sawUserMessage) {
       const lateEvent = detectLateNight(
         DEFAULT_EMOTION_CONFIG,

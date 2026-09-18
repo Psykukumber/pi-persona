@@ -1,5 +1,5 @@
 // ============================================================
-// pi-persona — 全局共享心情状态
+// pi-persona — globally shared mood state
 // ============================================================
 import { MoodEngine } from "./mood-engine.js";
 import { readPersistentStateLocked, syncMoodToPersistent, updatePersistentState } from "./persistence.js";
@@ -68,7 +68,7 @@ export async function refreshGlobalMood(engine: MoodEngine, persist: boolean): P
     replaceEnginePersistent(engine, next);
     restoreEngineFromPersistent(engine);
   } catch (err) {
-    console.error("[pi-persona] 刷新全局心情失败:", err);
+    console.error("[pi-persona] Failed to refresh global mood:", err);
     if (persist) {
       engine.tick();
       syncMoodToPersistent(engine);
@@ -105,7 +105,7 @@ export async function applyGlobalMoodEvent(
     replaceEnginePersistent(engine, next);
     restoreEngineFromPersistent(engine);
   } catch (err) {
-    console.error("[pi-persona] 应用全局心情事件失败，已降级为本地更新:", err);
+    console.error("[pi-persona] Failed to apply global mood event, fell back to a local update:", err);
     if (!change) {
       if (!engine.persistent.emotionUpdatesEnabled) {
         change = {
@@ -149,7 +149,7 @@ export async function setGlobalMood(
     replaceEnginePersistent(engine, next);
     restoreEngineFromPersistent(engine);
   } catch (err) {
-    console.error("[pi-persona] 设置全局心情失败，已降级为本地更新:", err);
+    console.error("[pi-persona] Failed to set global mood, fell back to a local update:", err);
     if (!change) {
       change = engine.setEmotion(emotion, intensity, trigger);
       syncMoodToPersistent(engine);
@@ -179,7 +179,7 @@ export async function setGlobalEmotionUpdatesEnabled(
     replaceEnginePersistent(engine, next);
     restoreEngineFromPersistent(engine);
   } catch (err) {
-    console.error("[pi-persona] 设置情绪变化开关失败，已降级为本地更新:", err);
+    console.error("[pi-persona] Failed to toggle emotion updates, fell back to a local update:", err);
     engine.persistent.emotionUpdatesEnabled = enabled;
     engine.persistent.lastInteraction = Date.now();
   }
