@@ -7,7 +7,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import matter from "gray-matter";
+import { parseFrontmatter, splitFrontmatter } from "./frontmatter.js";
 import type { SoulDefinition, SoulTraits } from "./types.js";
 import { DEFAULT_TRAITS } from "./types.js";
 
@@ -98,15 +98,15 @@ const NUMERIC_KEYS = [
 
 function parseMdFrontmatter(raw: string, onWarning?: SoulWarningSink): Record<string, any> {
   try {
-    const parsed = matter(raw);
-    const fm: Record<string, any> = parsed.data as Record<string, any>;
+    const fm = parseFrontmatter(raw);
     // Numeric field conversion. Invalid values no longer silently become 0.5 — they warn
     // and fall back to DEFAULT_TRAITS.
     for (const key of NUMERIC_KEYS) {
       const value = fm[key];
       if (value === undefined) continue;
 
-      const n = typeof value === "number" ? value : Number(value);
+      const n = typeof value === "number" ? value
+        : typeof value === "string" && value.trim() !== "" ? Number(value) : NaN;
       if (!Number.isFinite(n) || n < 0 || n > 1) {
         onWarning?.(
           `[pi-persona] IDENTIFY.md field ${key} must be a number between 0 and 1; ${JSON.stringify(value)} is invalid, using the default.`,
@@ -119,17 +119,18 @@ function parseMdFrontmatter(raw: string, onWarning?: SoulWarningSink): Record<st
     }
     return fm;
   } catch {
+    onWarning?.("[pi-persona] IDENTIFY.md has invalid YAML frontmatter; using default metadata.");
     return {};
   }
 }
 
 /**
- * Read the body of a .md file (skipping the --- frontmatter --- block) using gray-matter
+ * Read the body of a .md file without interpreting its YAML frontmatter
  */
 function readMdBody(filePath: string): string | null {
   try {
     const raw = fs.readFileSync(filePath, "utf-8");
-    return matter(raw).content.trim() || null;
+    return splitFrontmatter(raw).content.trim() || null;
   } catch {
     return null;
   }
@@ -162,9 +163,9 @@ function buildSoul(
   userProfile?: string,
 ): SoulDefinition {
   return {
-    name: metadata.name ?? "Soul",
-    emoji: metadata.emoji ?? "󰊠",
-    description: metadata.description ?? "User-defined soul",
+    name: typeof metadata.name === "string" ? metadata.name : "Soul",
+    emoji: typeof metadata.emoji === "string" ? metadata.emoji : "󰊠",
+    description: typeof metadata.description === "string" ? metadata.description : "User-defined soul",
     traits: buildTraits(metadata),
     systemPrompt,
     ...(userProfile ? { userProfile } : {}),

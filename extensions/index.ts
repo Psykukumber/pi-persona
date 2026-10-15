@@ -213,7 +213,9 @@ function registerAllHooks(pi: ExtensionAPI, state: PersonaRuntimeState): void {
     }
 
     let engine = state.engine;
-    if (engine && state.pendingImplicitAcceptance) {
+    // Idle custom-message runs are not user feedback. The property guard also
+    // supports older Pi versions whose event had no messageType discriminant.
+    if (engine && state.pendingImplicitAcceptance && "prompt" in event) {
       const explicitUserEvent = detectExplicitUserFeedback(
         event.prompt,
         DEFAULT_EMOTION_CONFIG,

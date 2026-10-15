@@ -97,7 +97,9 @@ Field reference:
 | `tsundere`          | 0-1    | Tsundere level; higher values are less easily moved by positive events |
 | `sarcasm`           | 0-1    | Sarcasm; higher values amplify negative events                         |
 
-Invalid numeric values are ignored and fall back to defaults.
+Frontmatter uses YAML only; executable tags and other frontmatter languages are not supported. YAML must be a mapping with unique keys. Invalid metadata produces a warning and falls back to defaults. Name, emoji, and description must be strings.
+
+Traits accept numbers or non-empty numeric strings between 0 and 1. Invalid values (including booleans, null, and empty strings) are ignored and fall back to defaults.
 
 ## Writing USER.md
 
@@ -180,6 +182,7 @@ Emotion intensity naturally decays over time, but does not disappear completely.
 extensions/index.ts       # pi extension entry
 src/commands.ts           # /persona command and TUI overlay
 src/footer.ts             # footer status text
+src/frontmatter.ts        # safe YAML frontmatter parsing
 src/global-mood.ts        # global mood synchronization
 src/mood-engine.ts        # emotion state machine
 src/persistence.ts        # state persistence and lock
@@ -187,6 +190,19 @@ src/soul-loader.ts        # SOUL / IDENTIFY / USER loading
 src/triggers.ts           # emotion triggers
 src/types.ts              # type definitions and default emotion config
 ```
+
+## Development
+
+Use Node.js 24 for development (the Node typings track this runtime).
+
+```bash
+npm install
+npm run typecheck
+npm test
+npm audit
+```
+
+Pi's host packages remain wildcard peer dependencies as recommended by Pi. This dependency update was tested with `@earendil-works/pi-coding-agent` / `pi-tui` 1.3.0 and `typebox` 1.3.37.
 
 ## Data Locations
 

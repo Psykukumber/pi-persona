@@ -184,7 +184,8 @@ export function parseSetEmotionArgs(input: string): ParseSetEmotionResult {
     return { ok: false, message: SET_USAGE };
   }
 
-  const emotion = EMOTION_ALIASES[parts[0].toLowerCase()] ?? EMOTION_ALIASES[parts[0]];
+  const key = parts[0].toLowerCase();
+  const emotion = Object.hasOwn(EMOTION_ALIASES, key) ? EMOTION_ALIASES[key] : undefined;
   if (!emotion) {
     return { ok: false, message: `Unknown emotion. ${AVAILABLE_EMOTIONS}` };
   }

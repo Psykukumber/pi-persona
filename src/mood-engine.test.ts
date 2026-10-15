@@ -168,6 +168,9 @@ test("parseSetEmotionArgs accepts english, chinese, percentage, and decimal inte
 
 test("parseSetEmotionArgs rejects invalid input", () => {
   assert.equal(parseSetEmotionArgs("nope 80").ok, false);
+  for (const inheritedKey of ["constructor", "toString", "__proto__"]) {
+    assert.equal(parseSetEmotionArgs(`${inheritedKey} 80`).ok, false);
+  }
   assert.equal(parseSetEmotionArgs("joy 120").ok, false);
   assert.equal(parseSetEmotionArgs("joy").ok, false);
 });

@@ -103,6 +103,32 @@ test("USER.md changes invalidate the cached soul", () => {
   });
 });
 
+test("loadSoul validates metadata types and numeric traits", () => {
+  withTemporaryHome((home) => {
+    writeAgentFile(home, "SOUL.md", "Soul body");
+    writeAgentFile(home, "IDENTIFY.md", "---\nname: [bad]\nemoji: 42\ndescription: false\nopenness: null\nformality: false\nsarcasm: ''\nagreeableness: '0.7'\n---");
+    const warnings: string[] = [];
+    const soul = loadSoul({ onWarning: (warning) => warnings.push(warning) });
+    assert.equal(soul?.name, "Soul");
+    assert.equal(soul?.description, "User-defined soul");
+    assert.equal(typeof soul?.emoji, "string");
+    assert.equal(soul?.traits.agreeableness, 0.7);
+    assert.equal(warnings.length, 3);
+  });
+});
+
+test("invalid IDENTIFY metadata warns and uses defaults without disabling the soul", () => {
+  withTemporaryHome((home) => {
+    writeAgentFile(home, "SOUL.md", "---\nignored: [\n---\nSoul body");
+    writeAgentFile(home, "IDENTIFY.md", "---\nname: [\n---");
+    const warnings: string[] = [];
+    const soul = loadSoul({ onWarning: (warning) => warnings.push(warning) });
+    assert.equal(soul?.name, "Soul");
+    assert.equal(soul?.systemPrompt, "Soul body");
+    assert.equal(warnings.length, 1);
+  });
+});
+
 test("MoodEngine injects user profile as a separate human-context section", () => {
   const engine = new MoodEngine(
     createSoul("Name: Sam\nWhat to call them: Sam"),
