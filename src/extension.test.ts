@@ -10,9 +10,11 @@ import { restorePersistentState } from "./persistence.js";
 
 test("custom-message runs do not consume pending implicit user acceptance", async () => {
   const originalHome = process.env.HOME;
+  const originalAgentDir = process.env.PI_CODING_AGENT_DIR;
   const home = mkdtempSync(path.join(tmpdir(), "pi-persona-extension-"));
   try {
     process.env.HOME = home;
+    delete process.env.PI_CODING_AGENT_DIR;
     invalidateSoulCache();
     const agentDir = path.join(home, ".pi", "agent");
     mkdirSync(agentDir, { recursive: true });
@@ -41,6 +43,8 @@ test("custom-message runs do not consume pending implicit user acceptance", asyn
     invalidateSoulCache();
     if (originalHome === undefined) delete process.env.HOME;
     else process.env.HOME = originalHome;
+    if (originalAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+    else process.env.PI_CODING_AGENT_DIR = originalAgentDir;
     rmSync(home, { recursive: true, force: true });
   }
 });

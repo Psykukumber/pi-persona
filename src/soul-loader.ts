@@ -1,12 +1,13 @@
 // ============================================================
 // pi-persona — soul loader
-// Customisation: ~/.pi/agent/IDENTIFY.md (metadata) + ~/.pi/agent/SOUL.md (prose body)
-//                + ~/.pi/agent/USER.md (optional user-maintained preferences and context)
-// Only the user-level ~/.pi/agent/ is read; with no SOUL.md there, no soul is loaded or injected.
+// Customisation: <agentDir>/IDENTIFY.md (metadata) + <agentDir>/SOUL.md (prose body)
+//                + <agentDir>/USER.md (optional user-maintained preferences and context)
+// getAgentDir() follows PI_CODING_AGENT_DIR, falling back to ~/.pi/agent.
+// With no SOUL.md in that directory, no soul is loaded or injected.
 // ============================================================
 import * as fs from "node:fs";
 import * as path from "node:path";
-import * as os from "node:os";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { parseFrontmatter, splitFrontmatter } from "./frontmatter.js";
 import type { SoulDefinition, SoulTraits } from "./types.js";
 import { DEFAULT_TRAITS } from "./types.js";
@@ -31,20 +32,16 @@ interface SoulCacheStamp {
 // File paths
 // ==============================================================
 
-function userHomeDir(): string {
-  return process.env.HOME || os.homedir();
-}
-
 function userIdentifyFile(): string {
-  return path.join(userHomeDir(), ".pi", "agent", "IDENTIFY.md");
+  return path.join(getAgentDir(), "IDENTIFY.md");
 }
 
 function userSoulFile(): string {
-  return path.join(userHomeDir(), ".pi", "agent", "SOUL.md");
+  return path.join(getAgentDir(), "SOUL.md");
 }
 
 function userProfileFile(): string {
-  return path.join(userHomeDir(), ".pi", "agent", "USER.md");
+  return path.join(getAgentDir(), "USER.md");
 }
 
 function getFileStamp(filePath: string): FileStamp {
