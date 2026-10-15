@@ -259,8 +259,9 @@ class PersonaOverlay implements Component {
 
   render(width: number): string[] {
     const th = this.theme;
-    const w = Math.min(62, width);
-    const innerW = w - 2;
+    if (width < 2) return width === 1 ? [th.fg("border", "│")] : [];
+    // Match the allocated overlay width so the compositor adds no area outside the frame.
+    const innerW = width - 2;
 
     const pad = (s: string, len: number): string => {
       const vis = visibleWidth(s);

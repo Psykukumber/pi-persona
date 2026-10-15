@@ -4,6 +4,8 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import type { Component } from "@earendil-works/pi-tui";
+import { visibleWidth } from "@earendil-works/pi-tui";
 
 import { registerPersonaCommands } from "./commands.js";
 import { MoodEngine } from "./mood-engine.js";
@@ -152,6 +154,34 @@ test("persona status opens overlay when engine exists", async () => {
     await harness.command.handler("", ctx);
 
     assert.equal(customs.length, 1);
+  });
+});
+
+test("persona overlay frame fills the allocated width on narrow and wide terminals", async () => {
+  await withTemporaryHome(async () => {
+    const harness = registerHarness(createEngine());
+    const { ctx, customs } = createContext();
+    await harness.command.handler("status", ctx);
+
+    const { factory, options } = customs[0] as {
+      factory: (tui: unknown, theme: unknown, keybindings: unknown, done: () => void) => Component;
+      options: { overlayOptions: { width: string } };
+    };
+    assert.equal(options.overlayOptions.width, "54%");
+    const theme = {
+      fg: (_color: string, text: string) => `\x1b[36m${text}\x1b[39m`,
+      bold: (text: string) => `\x1b[1m${text}\x1b[22m`,
+    };
+    const component = factory({}, theme, {}, () => {});
+    for (const width of [2, 10, 32, 62, 86, 108]) {
+      const lines = component.render(width);
+      assert.ok(lines.length > 2);
+      for (const line of lines) {
+        assert.equal(visibleWidth(line), width, `overlay line must fill ${width} columns`);
+      }
+    }
+    assert.equal(visibleWidth(component.render(1)[0]), 1);
+    assert.deepEqual(component.render(0), []);
   });
 });
 
